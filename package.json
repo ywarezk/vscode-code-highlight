@@ -1,7 +1,8 @@
 {
-  "name": "academeez-lecturer",
-  "displayName": "academeez-lecturer",
-  "description": "A VS Code extension for live coding lectures.",
+  "name": "code-highlight",
+  "publisher": "academeez",
+  "displayName": "Code Highlight for Lectures",
+  "description": "Highlight and annotate code snippets during live coding lectures. Focus attention with visual highlights and attach Markdown explanations without modifying source code.",
   "version": "0.0.1",
   "license": "MIT",
   "engines": {
@@ -15,8 +16,29 @@
   "contributes": {
     "commands": [
       {
-        "command": "academeez-lecturer.helloWorld",
-        "title": "Hello World"
+        "command": "code-highlight.addNotes",
+        "title": "Add Lecture Notes",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.report",
+        "title": "Report Issue",
+        "category": "CodeHighlight"
+      }
+    ],
+    "menus": {
+      "issue/reporter": [
+        {
+          "command": "code-highlight.report"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "code-highlight.addNotes",
+        "key": "ctrl+alt+l",
+        "mac": "ctrl+alt+l",
+        "when": "editorTextFocus && !editorReadonly"
       }
     ]
   },
