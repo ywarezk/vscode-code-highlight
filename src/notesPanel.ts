@@ -407,6 +407,16 @@ function getWebviewContent(): string {
           command: 'cancel'
         });
       }
+      
+      // Handle Cmd+S (Mac) or Ctrl+S (Windows/Linux) to save
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault(); // Prevent browser save dialog
+        const text = editor.value;
+        vscode.postMessage({
+          command: 'save',
+          text: text
+        });
+      }
     });
   </script>
 </body>
