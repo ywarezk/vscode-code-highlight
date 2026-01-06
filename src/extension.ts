@@ -1,10 +1,11 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {createOrShowNotesPanel} from './notesPanel';
+import {createOrShowNotesPanel, getNotesPanel, updateNotesPanelRanges} from './notesPanel';
 import {decorationManager} from './decorationManager';
 import {LectureFileDecorationProvider} from './fileDecorationProvider';
 import {lessonManager} from './lessonManager';
+import {LineRange} from './types';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -20,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(fileDecorationDisposable);
 
   // Register the "Add Lecture Notes" command
-  const addNotesDisposable = vscode.commands.registerCommand('code-highlight.addNotes', () => {
+  const addNotesDisposable = vscode.commands.registerCommand('code-highlight.addNotes', async () => {
     const editor = vscode.window.activeTextEditor;
 
     // Check if there's an active editor
@@ -29,27 +30,72 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    // Check if the user has selected code
-    const selection = editor.selection;
-    if (selection.isEmpty) {
-      vscode.window.showErrorMessage('Please select a code section to add lecture notes.');
+    // Check if there's an active lesson
+    const activeLesson = lessonManager.getActiveLesson();
+    if (!activeLesson) {
+      const createLesson = await vscode.window.showWarningMessage(
+        'No active lesson. Would you like to create one?',
+        {modal: true},
+        'Create Lesson'
+      );
+      if (createLesson === 'Create Lesson') {
+        vscode.commands.executeCommand('code-highlight.createLesson');
+      }
       return;
     }
 
-    // Apply decorations using the decoration manager
-    // This will also highlight the file in the explorer via FileDecorationProvider
-    decorationManager.applyDecorations(editor, selection);
+    // Check if notes panel is already open
+    const existingPanel = getNotesPanel();
+    if (existingPanel) {
+      // Panel is open - add range to existing panel
+      const selection = editor.selection;
+      if (selection.isEmpty) {
+        vscode.window.showWarningMessage('Please select a code range to add.');
+        return;
+      }
+
+      const newRange: LineRange = [selection.start.line, selection.end.line];
+      const currentRanges = decorationManager.getCurrentRanges();
+
+      // Check if range already exists
+      const exists = currentRanges.some(([start, end]) => start === newRange[0] && end === newRange[1]);
+
+      if (exists) {
+        vscode.window.showWarningMessage('This range is already selected.');
+        return;
+      }
+
+      // Add the new range
+      const updatedRanges = [...currentRanges, newRange];
+      decorationManager.applyDecorationsForRanges(editor, updatedRanges);
+
+      // Update the notes panel
+      updateNotesPanelRanges(updatedRanges, editor.document.uri.fsPath);
+
+      vscode.window.showInformationMessage(`Range added: Lines ${newRange[0] + 1}-${newRange[1] + 1}`);
+      return;
+    }
+
+    // Panel is not open - create new panel
+    const selection = editor.selection;
+    if (selection.isEmpty) {
+      // Allow opening panel for general notes
+      createOrShowNotesPanel(context, undefined, true);
+      return;
+    }
 
     // Get selection info
     const filePath = editor.document.uri.fsPath;
     const startLine = selection.start.line;
     const endLineNumber = selection.end.line;
 
-    // Create or reveal the notes panel with selection info
+    // Apply decorations using the decoration manager
+    decorationManager.applyDecorations(editor, selection);
+
+    // Create or reveal the notes panel with initial range
     createOrShowNotesPanel(context, {
       file: filePath,
-      start: startLine,
-      end: endLineNumber,
+      ranges: [[startLine, endLineNumber]],
     });
   });
 
