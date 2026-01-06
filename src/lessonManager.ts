@@ -246,6 +246,16 @@ class LessonManager {
   }
 
   /**
+   * Save a lesson to disk
+   */
+  saveLesson(lesson: Lesson): void {
+    this.initialize();
+
+    const lessonPath = path.join(this.getLessonsDir(), `lesson-${lesson.id}.json`);
+    fs.writeFileSync(lessonPath, JSON.stringify(lesson, null, 2), 'utf-8');
+  }
+
+  /**
    * Delete a lesson
    */
   deleteLesson(id: number): void {

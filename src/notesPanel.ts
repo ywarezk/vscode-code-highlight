@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import {decorationManager} from './decorationManager';
 import {lessonManager} from './lessonManager';
-import {LineRange} from './types';
+import {LineRange, LectureNote} from './types';
 
 interface SelectionInfo {
   file: string;
@@ -151,44 +151,51 @@ export function createOrShowNotesPanel(
  * Save note to the active lesson
  */
 async function saveNoteToLesson(markdown: string, selection: SelectionInfo | undefined): Promise<void> {
+  // Get fresh copy of the active lesson from disk
   const activeLesson = lessonManager.getActiveLesson();
   if (!activeLesson) {
     throw new Error('No active lesson');
   }
 
-  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-  if (!workspaceFolder) {
-    throw new Error('No workspace folder found');
-  }
-
-  // Determine if it's a general note or code note
+  // Create a new note object
+  let newNote: LectureNote;
   if (!selection || selection.ranges.length === 0) {
     // General note
-    activeLesson.notes.push({
+    newNote = {
       type: 'general',
-      markdown,
-    });
+      markdown: markdown.trim(),
+    };
   } else {
     // Code note - get relative file path
     const filePath = selection.file;
     const relativePath = vscode.workspace.asRelativePath(filePath);
 
-    activeLesson.notes.push({
+    // Validate ranges
+    const validatedRanges = selection.ranges.filter(([start, end]) => {
+      // Validate: start should be <= end
+      if (start > end) {
+        return false;
+      }
+      return true;
+    });
+
+    if (validatedRanges.length === 0) {
+      throw new Error('No valid ranges provided');
+    }
+
+    newNote = {
       type: 'code',
       file: relativePath,
-      ranges: selection.ranges,
-      markdown,
-    });
+      ranges: validatedRanges,
+      markdown: markdown.trim(),
+    };
   }
 
-  // Save the lesson
-  const lessonPath = require('path').join(
-    workspaceFolder.uri.fsPath,
-    '.vscode',
-    'lessons',
-    `lesson-${activeLesson.id}.json`
-  );
-  require('fs').writeFileSync(lessonPath, JSON.stringify(activeLesson, null, 2), 'utf-8');
+  // Add the note to the lesson
+  activeLesson.notes.push(newNote);
+
+  // Save the lesson using lessonManager
+  lessonManager.saveLesson(activeLesson);
 }
 
 function getWebviewContent(): string {
