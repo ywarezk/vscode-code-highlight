@@ -21,6 +21,21 @@
         "category": "CodeHighlight"
       },
       {
+        "command": "code-highlight.createLesson",
+        "title": "Create New Lesson",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.deleteLesson",
+        "title": "Delete Lesson",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.setActiveLesson",
+        "title": "Set Active Lesson",
+        "category": "CodeHighlight"
+      },
+      {
         "command": "code-highlight.report",
         "title": "Report Issue",
         "category": "CodeHighlight"
