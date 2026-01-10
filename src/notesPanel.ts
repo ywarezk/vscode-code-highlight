@@ -12,6 +12,7 @@ let notesPanel: vscode.WebviewPanel | undefined = undefined;
 let currentSelection: SelectionInfo | undefined = undefined;
 let isWaitingForRangeSelection: boolean = false;
 let rangeSelectionDisposable: vscode.Disposable | undefined = undefined;
+let currentText: string = ''; // Store the current textarea content
 
 /**
  * Get the current notes panel (for use by extension.ts)
@@ -35,7 +36,8 @@ export function updateNotesPanelRanges(ranges: LineRange[], file: string): void 
   }
 
   if (notesPanel) {
-    notesPanel.webview.html = getWebviewContent();
+    // Update HTML preserving current text (stored from webview input events)
+    notesPanel.webview.html = getWebviewContent(currentText);
   }
 }
 
@@ -73,9 +75,15 @@ export function createOrShowNotesPanel(
   }
 
   if (notesPanel) {
-    // If panel already exists, update it with new selection info
+    // If panel already exists, check if we're starting a new note (different file)
+    // Clear text only if the file changed, otherwise preserve it (adding ranges to same note)
+    if (currentSelection && selectionInfo && currentSelection.file !== selectionInfo.file) {
+      currentText = '';
+    }
+
+    // Update panel with preserved or cleared text
     notesPanel.reveal(columnToShowIn, false);
-    notesPanel.webview.html = getWebviewContent();
+    notesPanel.webview.html = getWebviewContent(currentText);
     return;
   }
 
@@ -85,8 +93,9 @@ export function createOrShowNotesPanel(
     retainContextWhenHidden: true,
   });
 
-  // Set initial content
-  notesPanel.webview.html = getWebviewContent();
+  // Set initial content (clear text for new panel)
+  currentText = '';
+  notesPanel.webview.html = getWebviewContent('');
 
   // Handle messages from the webview
   notesPanel.webview.onDidReceiveMessage(
@@ -104,6 +113,7 @@ export function createOrShowNotesPanel(
             await saveNoteToLesson(message.text, currentSelection);
             vscode.window.showInformationMessage('Lecture notes saved!');
             decorationManager.requestClear();
+            currentText = '';
             notesPanel?.dispose();
           } catch (error) {
             vscode.window.showErrorMessage(error instanceof Error ? error.message : 'Failed to save notes');
@@ -111,11 +121,18 @@ export function createOrShowNotesPanel(
           break;
         case 'cancel':
           decorationManager.requestClear();
+          currentText = '';
           notesPanel?.dispose();
           // Restore focus to the text editor using command
           setTimeout(() => {
             vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
           }, 100);
+          break;
+        case 'updateText':
+          // Webview sends text updates - store it for preservation during range updates
+          if (message.text !== undefined) {
+            currentText = message.text;
+          }
           break;
         case 'removeRange':
           if (currentSelection && message.rangeIndex !== undefined) {
@@ -123,9 +140,9 @@ export function createOrShowNotesPanel(
             decorationManager.removeRange(message.rangeIndex);
             // Update currentSelection to match decoration manager
             currentSelection.ranges = decorationManager.getCurrentRanges();
-            // Update the panel
+            // Update the panel (preserve current text)
             if (notesPanel) {
-              notesPanel.webview.html = getWebviewContent();
+              notesPanel.webview.html = getWebviewContent(currentText);
             }
           }
           break;
@@ -140,6 +157,7 @@ export function createOrShowNotesPanel(
     () => {
       notesPanel = undefined;
       currentSelection = undefined;
+      currentText = '';
       isWaitingForRangeSelection = false;
     },
     null,
@@ -198,7 +216,7 @@ async function saveNoteToLesson(markdown: string, selection: SelectionInfo | und
   lessonManager.saveLesson(activeLesson);
 }
 
-function getWebviewContent(): string {
+function getWebviewContent(preservedText: string = ''): string {
   const activeLesson = lessonManager.getActiveLesson();
   const lessonTitle = activeLesson ? activeLesson.title : 'No active lesson';
   const ranges = currentSelection?.ranges || [];
@@ -360,7 +378,11 @@ function getWebviewContent(): string {
       }
     </div>
   </div>
-  <textarea id="markdown-editor" placeholder="Write your lecture notes in Markdown here..."></textarea>
+  <textarea id="markdown-editor" placeholder="Write your lecture notes in Markdown here...">${preservedText
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')}</textarea>
   <div class="button-container">
     <button class="button-cancel" id="cancel-button">Cancel</button>
     <button class="button-save" id="save-button">Save</button>
@@ -399,6 +421,16 @@ function getWebviewContent(): string {
         });
       });
     });
+
+    // Send text updates to extension whenever text changes (for preservation during range updates)
+    if (editor) {
+      editor.addEventListener('input', () => {
+        vscode.postMessage({
+          command: 'updateText',
+          text: editor.value
+        });
+      });
+    }
 
     // Handle Escape key to cancel
     document.addEventListener('keydown', (event) => {

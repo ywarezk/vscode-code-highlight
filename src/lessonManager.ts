@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import {Lesson, LessonsMasterState, LessonSummary} from './types';
+import {logger} from './logger';
 
 class LessonManager {
   private masterStatePath: string | undefined;
@@ -78,7 +79,7 @@ class LessonManager {
       return JSON.parse(content) as LessonsMasterState;
     } catch (error) {
       // If file is corrupted, return default state
-      console.error('Error loading master state:', error);
+      logger.error('Error loading master state', error);
       return {
         activeLessonId: null,
         lessons: [],
@@ -133,7 +134,7 @@ class LessonManager {
       const content = fs.readFileSync(lessonPath, 'utf-8');
       return JSON.parse(content) as Lesson;
     } catch (error) {
-      console.error(`Error loading lesson ${state.activeLessonId}:`, error);
+      logger.error(`Error loading lesson ${state.activeLessonId}`, error);
       return null;
     }
   }
@@ -216,7 +217,7 @@ class LessonManager {
       const content = fs.readFileSync(lessonPath, 'utf-8');
       return JSON.parse(content) as Lesson;
     } catch (error) {
-      console.error(`Error loading lesson ${id}:`, error);
+      logger.error(`Error loading lesson ${id}`, error);
       return null;
     }
   }

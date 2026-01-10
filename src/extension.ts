@@ -6,19 +6,23 @@ import {decorationManager} from './decorationManager';
 import {LectureFileDecorationProvider} from './fileDecorationProvider';
 import {lessonManager} from './lessonManager';
 import {LineRange} from './types';
+import {NotesReviewController} from './notesReview';
+import {logger} from './logger';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "code-highlight" is now active!');
+  logger.info('Extension "code-highlight" activated');
 
   // Register the file decoration provider to highlight files in the explorer
   const fileDecorationProvider = new LectureFileDecorationProvider();
   const fileDecorationDisposable = vscode.window.registerFileDecorationProvider(fileDecorationProvider);
   decorationManager.setFileDecorationProvider(fileDecorationProvider);
   context.subscriptions.push(fileDecorationDisposable);
+
+  // Register the "Review Lecture Notes" command + navigation commands
+  const notesReviewController = new NotesReviewController(context);
+  notesReviewController.register();
 
   // Register the "Add Lecture Notes" command
   const addNotesDisposable = vscode.commands.registerCommand('code-highlight.addNotes', async () => {
@@ -223,7 +227,12 @@ export function activate(context: vscode.ExtensionContext) {
   decorationManager.on('clear', () => {
     // Decorations are already cleared by the manager
   });
+
+  // Register logger disposal
+  context.subscriptions.push({dispose: () => logger.dispose()});
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  logger.dispose();
+}

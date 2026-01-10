@@ -2,15 +2,53 @@
   "name": "code-highlight",
   "publisher": "academeez",
   "displayName": "Code Highlight for Lectures",
-  "description": "Highlight and annotate code snippets during live coding lectures. Focus attention with visual highlights and attach Markdown explanations without modifying source code.",
+  "description": "Perfect tool for programming instructors! Highlight code sections and add Markdown annotations during live coding lectures, tutorials, and demos. Organize notes by lessons, review them with keyboard navigation, and keep your audience engaged - all without modifying source code.",
   "version": "0.0.1",
   "license": "MIT",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.107.0"
   },
   "categories": [
+    "Education",
     "Other"
   ],
+  "keywords": [
+    "education",
+    "teaching",
+    "lecture",
+    "instructor",
+    "educator",
+    "tutorial",
+    "live coding",
+    "code annotation",
+    "code highlighting",
+    "markdown notes",
+    "code review",
+    "presentation",
+    "demonstration",
+    "code explanation",
+    "programming tutorial",
+    "code walkthrough",
+    "educational tool",
+    "classroom",
+    "course",
+    "lesson planning",
+    "code comments",
+    "annotation tool"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ywarezk/vscode-code-highlight.git"
+  },
+  "homepage": "https://github.com/ywarezk/vscode-code-highlight#readme",
+  "bugs": {
+    "url": "https://github.com/ywarezk/vscode-code-highlight/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
@@ -18,6 +56,11 @@
       {
         "command": "code-highlight.addNotes",
         "title": "Add Lecture Notes",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.reviewNotes",
+        "title": "Review Lecture Notes",
         "category": "CodeHighlight"
       },
       {
@@ -54,6 +97,21 @@
         "key": "ctrl+alt+l",
         "mac": "ctrl+alt+l",
         "when": "editorTextFocus && !editorReadonly"
+      },
+      {
+        "command": "code-highlight.reviewNextNote",
+        "key": "right",
+        "when": "codeHighlight.reviewMode && (markdownPreviewFocus || activeWebviewPanelId == 'markdown.preview')"
+      },
+      {
+        "command": "code-highlight.reviewPrevNote",
+        "key": "left",
+        "when": "codeHighlight.reviewMode && (markdownPreviewFocus || activeWebviewPanelId == 'markdown.preview')"
+      },
+      {
+        "command": "code-highlight.exitReviewNotes",
+        "key": "escape",
+        "when": "codeHighlight.reviewMode && (markdownPreviewFocus || activeWebviewPanelId == 'markdown.preview')"
       }
     ]
   },
@@ -72,15 +130,16 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.107.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.48.1",
-    "eslint": "^9.39.1",
+    "@types/vscode": "^1.107.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
+    "eslint": "^9.39.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.48.1"
   }
 }

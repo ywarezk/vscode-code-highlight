@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import {logger} from './logger';
 
 export interface LectureNote {
   file: string;
@@ -33,7 +34,7 @@ export async function saveNote(notes: string, file: string, start: number, end: 
       const content = fs.readFileSync(notesFile, 'utf8');
       allNotes = JSON.parse(content);
     } catch (error) {
-      console.error('Error reading lecture notes file:', error);
+      logger.error('Error reading lecture notes file', error);
     }
   }
 
@@ -73,7 +74,7 @@ export function loadNotes(): LectureNote[] {
     const content = fs.readFileSync(notesFile, 'utf8');
     return JSON.parse(content);
   } catch (error) {
-    console.error('Error reading lecture notes file:', error);
+    logger.error('Error reading lecture notes file', error);
     return [];
   }
 }
