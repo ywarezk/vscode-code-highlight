@@ -35,7 +35,11 @@ class LessonManager {
     // Initialize status bar item if not already created
     if (!this.statusBarItem) {
       this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-      this.statusBarItem.command = 'code-highlight.createLesson';
+      this.statusBarItem.command = 'code-highlight.setActiveLesson';
+      // Update status bar to show active lesson from lessons.json (or "No active lesson" if none)
+      this.updateStatusBar();
+    } else {
+      // Update status bar even if it already exists
       this.updateStatusBar();
     }
   }

@@ -14,6 +14,9 @@ import {logger} from './logger';
 export function activate(context: vscode.ExtensionContext) {
   logger.info('Extension "code-highlight" activated');
 
+  // Initialize lesson manager and show status bar on activation
+  initializeLessonManager(context);
+
   // Register the file decoration provider to highlight files in the explorer
   const fileDecorationProvider = new LectureFileDecorationProvider();
   const fileDecorationDisposable = vscode.window.registerFileDecorationProvider(fileDecorationProvider);
@@ -183,25 +186,48 @@ export function activate(context: vscode.ExtensionContext) {
   const setActiveLessonDisposable = vscode.commands.registerCommand('code-highlight.setActiveLesson', async () => {
     try {
       const allLessons = lessonManager.getAllLessons();
-
-      if (allLessons.length === 0) {
-        vscode.window.showInformationMessage('No lessons available. Create a lesson first.');
-        return;
-      }
-
       const activeLesson = lessonManager.getActiveLesson();
       const activeLessonId = activeLesson?.id;
 
-      // Show quick pick to select a lesson
-      const lessonItems = allLessons.map(lesson => ({
-        label: lesson.title,
-        description: lesson.id === activeLessonId ? 'Currently active' : `ID: ${lesson.id}`,
-        id: lesson.id,
-        picked: lesson.id === activeLessonId, // Mark the current active lesson
-      }));
+      interface LessonQuickPickItem extends vscode.QuickPickItem {
+        id?: number;
+        isCreateOption?: boolean;
+      }
+
+      // Create quick pick items
+      const lessonItems: LessonQuickPickItem[] = [];
+
+      // Add "Create New Lesson" option at the top
+      lessonItems.push({
+        label: '$(add) Create New Lesson',
+        description: '',
+        isCreateOption: true,
+        alwaysShow: true,
+      });
+
+      // Add separator if there are lessons
+      if (allLessons.length > 0) {
+        lessonItems.push({
+          label: 'Lessons',
+          kind: vscode.QuickPickItemKind.Separator,
+          isCreateOption: false,
+        });
+
+        // Add each lesson
+        for (const lesson of allLessons) {
+          const isActive = lesson.id === activeLessonId;
+          lessonItems.push({
+            label: `${isActive ? '$(check) ' : '  '}${lesson.title}`,
+            description: isActive ? 'Currently active' : `ID: ${lesson.id}`,
+            id: lesson.id,
+            isCreateOption: false,
+            picked: isActive, // Mark the current active lesson
+          });
+        }
+      }
 
       const selected = await vscode.window.showQuickPick(lessonItems, {
-        placeHolder: 'Select a lesson to set as active',
+        placeHolder: 'Select a lesson or create a new one',
       });
 
       if (!selected) {
@@ -209,12 +235,22 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      // Only set if it's different from the current active lesson
-      if (selected.id !== activeLessonId) {
-        lessonManager.setActiveLesson(selected.id);
-        vscode.window.showInformationMessage(`Lesson "${selected.label}" is now active.`);
-      } else {
-        vscode.window.showInformationMessage(`Lesson "${selected.label}" is already active.`);
+      // Handle "Create New Lesson" option
+      if (selected.isCreateOption) {
+        // Execute the create lesson command
+        vscode.commands.executeCommand('code-highlight.createLesson');
+        return;
+      }
+
+      // Handle lesson selection
+      if (selected.id !== undefined) {
+        // Only set if it's different from the current active lesson
+        if (selected.id !== activeLessonId) {
+          lessonManager.setActiveLesson(selected.id);
+          vscode.window.showInformationMessage(`Lesson "${selected.label.trim()}" is now active.`);
+        } else {
+          vscode.window.showInformationMessage(`Lesson "${selected.label.trim()}" is already active.`);
+        }
       }
     } catch (error) {
       vscode.window.showErrorMessage(error instanceof Error ? error.message : 'Failed to set active lesson');
@@ -230,6 +266,33 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register logger disposal
   context.subscriptions.push({dispose: () => logger.dispose()});
+}
+
+/**
+ * Initialize lesson manager and display status bar
+ */
+function initializeLessonManager(context: vscode.ExtensionContext): void {
+  // Try to initialize if workspace folder exists
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+    try {
+      lessonManager.initialize();
+    } catch (error) {
+      // Silently fail if workspace not ready
+      logger.warn('Could not initialize lesson manager on startup');
+    }
+  }
+
+  // Listen for workspace folder changes to initialize when workspace opens
+  const workspaceChangeDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+      try {
+        lessonManager.initialize();
+      } catch (error) {
+        // Silently fail if workspace not ready
+      }
+    }
+  });
+  context.subscriptions.push(workspaceChangeDisposable);
 }
 
 // This method is called when your extension is deactivated

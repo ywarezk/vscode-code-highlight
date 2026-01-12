@@ -1,9 +1,9 @@
 {
-  "name": "code-highlight",
+  "name": "academeez-code-highlight",
   "publisher": "academeez",
   "displayName": "Code Highlight for Lectures",
   "description": "Perfect tool for programming instructors! Highlight code sections and add Markdown annotations during live coding lectures, tutorials, and demos. Organize notes by lessons, review them with keyboard navigation, and keep your audience engaged - all without modifying source code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "icon": "icon.png",
   "engines": {
@@ -49,7 +49,9 @@
     "color": "#1e1e1e",
     "theme": "dark"
   },
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -76,6 +78,16 @@
       {
         "command": "code-highlight.setActiveLesson",
         "title": "Set Active Lesson",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.showLessonsPanel",
+        "title": "Show Lessons Panel",
+        "category": "CodeHighlight"
+      },
+      {
+        "command": "code-highlight.closeLessonsPopup",
+        "title": "Close Lessons Popup",
         "category": "CodeHighlight"
       },
       {
@@ -112,6 +124,11 @@
         "command": "code-highlight.exitReviewNotes",
         "key": "escape",
         "when": "codeHighlight.reviewMode && (markdownPreviewFocus || activeWebviewPanelId == 'markdown.preview')"
+      },
+      {
+        "command": "code-highlight.closeLessonsPopup",
+        "key": "escape",
+        "when": "activeWebviewPanelId == 'lessonsPopup'"
       }
     ]
   },
